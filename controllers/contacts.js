@@ -33,11 +33,6 @@ const add = async (req, res) => {
     throw error;
   }
   validation(contactSchema);
-  //   const { error } = contactSchema.validate(req.body);
-  //   if (error) {
-  //     error.status = 400;
-  //     throw error;
-  //   }
 
   const contact = await addContact(req.body);
   res.status(201).json(contact);
@@ -62,11 +57,7 @@ const updateById = async (req, res) => {
     throw error;
   }
   validation(contactSchema);
-  //   const { error } = contactSchema.validate(req.body);
-  //   if (error) {
-  //     error.status = 400;
-  //     throw error;
-  //   }
+
   const { contactId } = req.params;
   const contact = await updateContact(contactId, req.body);
   if (!contact) {
