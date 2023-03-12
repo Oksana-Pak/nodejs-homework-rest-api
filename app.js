@@ -1,6 +1,9 @@
 const express = require('express');
 const logger = require('morgan');
 const cors = require('cors');
+const { notFound, globalErrorHandler } = require('./middelwares');
+
+require('dotenv').config();
 
 const contactsRouter = require('./routes/api/contacts');
 
@@ -14,13 +17,8 @@ app.use(express.json());
 
 app.use('/api/contacts', contactsRouter);
 
-app.use((req, res) => {
-  res.status(404).json({ message: 'Not found' });
-});
+app.use(notFound);
 
-app.use((err, req, res, next) => {
-  const { status = 500 } = err;
-  res.status(status).json({ message: err.message });
-});
+app.use(globalErrorHandler);
 
 module.exports = app;
