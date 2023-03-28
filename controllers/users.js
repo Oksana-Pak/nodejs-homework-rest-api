@@ -1,9 +1,14 @@
 const jwt = require('jsonwebtoken');
+const gravatar = require('gravatar');
+const path = require('path');
+const fs = require('fs').promises;
+const Jimp = require('jimp');
 const { User } = require('../models');
 const { HttpError } = require('../utils');
 
 const { JWT_SECRET, JWT_EXPIRES } = process.env;
-// console.log('secret controllers users', JWT_SECRET);
+
+const avatarsPath = path.join(__dirname, '../', 'public', 'avatars');
 
 const register = async (req, res) => {
   const { email, password, subscription } = req.body;
@@ -11,14 +16,15 @@ const register = async (req, res) => {
   if (user) {
     throw new HttpError(409, 'Email in use');
   }
-
-  const newUser = new User({ email, subscription });
+  const avatarURL = gravatar.url(email, { s: '250', d: 'identicon' });
+  const newUser = new User({ email, subscription, avatarURL });
   newUser.setPassword(password);
   newUser.save();
   res.status(201).json({
     user: {
       email,
       subscription,
+      avatarURL,
     },
   });
 };
@@ -69,4 +75,31 @@ const updateSubscription = async (req, res) => {
   res.status(200).json(updateUser);
 };
 
-module.exports = { register, login, logout, getCurrent, updateSubscription };
+const updateAvatar = async (req, res) => {
+  const { path: tmpPath, originalname } = req.file;
+  const { id } = req.user;
+
+  await Jimp.read(tmpPath)
+    .then(image => {
+      return image.resize(250, 250).write(tmpPath);
+    })
+    .catch(err => {
+      console.error(err);
+      throw new HttpError(400, err.message);
+    });
+
+  const newAvatarName = `${id}_${originalname}`;
+
+  try {
+    const resultUpload = path.join(avatarsPath, newAvatarName);
+    await fs.rename(tmpPath, resultUpload);
+    const avatarURL = path.join('avatars', newAvatarName);
+    await User.findByIdAndUpdate(id, { avatarURL });
+    res.status(200).json({ avatarURL });
+  } catch (error) {
+    await fs.unlink(tmpPath);
+    throw new HttpError(401, 'Not authorized');
+  }
+};
+
+module.exports = { register, login, logout, getCurrent, updateSubscription, updateAvatar };
